@@ -1,0 +1,84 @@
+body,input,textarea,select,datalist,a {
+    font-family: monospace;
+    font-size: 1.0vw
+    font-weight: 400;
+    background-color: #222;
+    color: #ccc    
+}
+
+
+input,textarea,select {
+ 	border: 1px;
+    border-style: solid;
+    border-color: #444; 
+}
+
+
+.menuContainer {
+	display: flex;
+}
+
+
+.menuItem {
+	font-weight: 800;
+	text-decoration: none;
+}
+
+
+.menuItem:hover {
+	background-color: #ccc;
+	color: #222;
+	transition: background-color 0.5s;
+}
+
+
+.lineContainer {
+    width: 80em;
+    border: 1px;
+    border-color: #444;
+    border-style: solid;
+    margin: 30px;
+    padding: 5px; 
+}
+
+
+.linePropertyContainer {
+    display: flex;
+    column-gap: 10px;
+    padding: 3px;
+}
+
+
+.lineLabel {
+    padding: 3px;
+    flex: 1;
+    font-weight: 800;
+}
+
+
+.lineText {
+    padding: 10px;
+    flex: 20;
+    border-color: #444;
+}
+
+
+.lineName {
+    flex: 6;
+}
+
+
+.lineEmotion {
+   flex: 2;
+   
+}
+
+
+.lineLabelHeSaid {
+    font-weight: 800;
+}
+
+
+.lineHeSaid {
+    flex: 1;
+}
