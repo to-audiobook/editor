@@ -9,9 +9,13 @@
 	<body>
 		<div id='divMenu' class="menuContainer">
 			<input type="file" id="buttonInputFile" style="display:none"/>
-			<a class="menuItem" id="menuLoad" href="javascript:document.getElementById('buttonInputFile').click()">Load</a>
-			&nbsp;			
-			<a class="menuItem" id="menuSave">Save</a>
+			<a class="menuItem" id="menuLoad" href="javascript:document.getElementById('buttonInputFile').click()"><span class="menuItemClickable">Load</span></a>
+			<span class="menuItem">|</span>
+			<a  class="menuItem" id="menuSave"><span class="menuItemClickable">Save</span></a>
+			<span class="menuItem">|</span>			
+			<a class="menuItem" id="menuSplit"><span class="menuItemClickable">Split</span></a>
+			<span class="menuItem">|</span>			
+			<a class="menuItem" id="menuUndoSplit"><span class="menuItemClickable">Undo Split</span></a>
 		</div>
 		<div id='divLines'>
 		</div>

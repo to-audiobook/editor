@@ -1,6 +1,25 @@
 'use strict'
 
 
+class UndoSplitInfo
+{
+	Divs = [];
+	Line = null;
+
+	constructor(div, line)
+	{
+		this.Divs.push(div);
+		this.Line = {
+			Text: line.Text,
+			Name: line.Name,
+			Emotion: line['Emotion'],
+			HeSaid: line['HeSaid']
+		};
+	}
+};
+
+
+
 class Editor
 {
 	_data = null;
@@ -9,6 +28,9 @@ class Editor
 	_names = new Set();
 	_modified = false;
 	_fileName = null;
+	_textareaSelected = null;
+	_undoSplitStack = [];
+	
 
 	static BeforeUnloadCallback(event)
     {    	
@@ -20,17 +42,33 @@ class Editor
     constructor()
     {
         var self = this;
-        document.getElementById('buttonInputFile').addEventListener('change', 
+        document.getElementById('buttonInputFile').addEventListener(
+        	'change', 
             function(event)
-        {
-            self.MenuLoadClicked(event);
-        });
+	        {
+	            self.MenuLoadClicked(event);
+	        });
 
-        document.getElementById('menuSave').addEventListener('click', 
+        document.getElementById('menuSave').addEventListener(
+        	'click', 
             function(event)
-        {
-            self.MenuSaveClicked(event);
-        });
+	        {
+	            self.MenuSaveClicked(event);
+	        });
+
+        document.getElementById('menuSplit').addEventListener(
+        	'click', 
+            function(event)
+	        {
+	            self.MenuSplitClicked(event);
+	        });
+
+	    document.getElementById('menuUndoSplit').addEventListener(
+	       	'click', 
+	        function(event)
+	        {
+	            self.MenuUndoSplitClicked(event);
+	        });
 
         this._divLines = document.getElementById('divLines');
 
@@ -49,6 +87,18 @@ class Editor
     MenuSaveClicked(event)
     {
         this.SaveJSON();
+    }
+
+
+    MenuSplitClicked(event)
+    {
+        this.SplitSelectedText();
+    }
+
+
+    MenuUndoSplitClicked(event)
+    {
+        this.UndoSplitSelectedText();
     }
 
 
@@ -128,9 +178,9 @@ class Editor
     }
 
 
-    LoadJSON(file)
-    {    
-    	// callback that adds the newly input name to the set of names
+	CreateLineDiv(line, previousDiv)
+	{
+	
     	self = this;
 
     	function SetModifiedCallback(e)
@@ -141,7 +191,7 @@ class Editor
     	function AddNameCallback(e)
     	{	
     		const name = e.target.value;
-    		e.target.Line.Name = name;
+    		e.target.parentElement.parentElement.LineInfo.Line.Name = name;
     		self.AddName(name);
     		self.SetModified(true);
     	}
@@ -149,17 +199,110 @@ class Editor
     	function SetEmotionCallback(e)
     	{
     		const emotion = e.target.value;
-    		e.target.Line.Emotion = emotion;
+    		e.target.parentElement.parentElement.LineInfo.Line.Emotion = emotion;
     		self.SetModified(true);
     	}
 
     	function SetHeSaidCallback(e)
     	{
-    		const checked = e.target.value === 'on';
-    		e.target.Line.HeSaid = checked;
+    		const checked = e.target.checked;
+    		e.target.parentElement.parentElement.parentElement.LineInfo.Line.HeSaid = checked;
     		self.SetModified(true);
     	}
 
+    	function SetSelectedTextareaCallback(e)
+    	{
+    		self._textareaSelected = e.target;
+    	}
+	
+    	
+        var div = this.CreateElement(null, 'div', 'lineContainer');                
+
+        var divText = this.CreateElement(div, 'div', 'linePropertyContainer');
+
+        var textAreaText = this.CreateElement(divText, 'textarea', 'lineText');
+        textAreaText.cols = 80;
+        textAreaText.rows = 1;
+        textAreaText.value = line.Text;
+        textAreaText.readOnly = true;
+        textAreaText.tabIndex = "-1";
+        textAreaText.style.height = 'auto';
+        //textAreaText.Line = line;
+        textAreaText.addEventListener('click', SetSelectedTextareaCallback);
+
+        var divProps = this.CreateElement(div, 'div', 'linePropertyContainer');
+       
+        var labelName = this.CreateElement(divProps, 'label', 'lineLabel');
+        labelName.textContent = 'Name:';
+        var inputName = this.CreateElement(divProps, 'input', 'lineName');
+        inputName.type = "text";
+        inputName.setAttribute('list', this._datalistName.id);
+        inputName.addEventListener('blur', AddNameCallback);
+        inputName.addEventListener('input', SetModifiedCallback);
+        inputName.value = line.Name !== '???' ? line.Name : '';
+        //inputName.Line = line;
+
+		// empty elements just to give some space between the "name"
+		// and the other property. Competent web designers probably
+		// do not need this sort of hack
+		this.CreateElement(divProps, 'label', 'lineLabel');
+		this.CreateElement(divProps, 'label', 'lineLabel');
+
+        var labelEmotion = this.CreateElement(divProps, 'label', 'lineLabel');
+        labelEmotion.textContent = 'Emotion:';
+        var selectEmotion = this.CreateElement(divProps, 'select', 'lineEmotion');
+        this.CreateElementOption(selectEmotion, 'none');
+        this.CreateElementOption(selectEmotion, 'angry');
+        this.CreateElementOption(selectEmotion, 'excited');
+        this.CreateElementOption(selectEmotion, 'sad');
+        selectEmotion.addEventListener('change', SetEmotionCallback);
+        selectEmotion.value = line.Emotion ? line.Emotion : 'none';
+        //selectEmotion.Line = line;
+
+		// more empty elements for spacing
+		this.CreateElement(divProps, 'label', 'lineLabel');			                
+        
+       	var labelheSaid = this.CreateElement(divProps, 'label', 'lineLabelHeSaid');
+       	labelheSaid.textContent = 'He said';
+       	var inputHeSaid = this.CreateElement(labelheSaid, 'input', 'lineHeSaid');
+       	inputHeSaid.type = "checkbox";
+       	inputHeSaid.addEventListener('click', SetHeSaidCallback);
+       	inputHeSaid.checked = line.HeSaid ? line.HeSaid : false;
+       	//inputHeSaid.Line = line;
+
+		if(previousDiv === null)
+		{
+        	this._divLines.appendChild(div);
+        }
+        else
+        {
+        	previousDiv.insertAdjacentElement('afterend', div);
+        }
+
+        // must be done after the textArea is visible, which will only
+        // happen after it is added to the body
+        textAreaText.style.height = 'auto';
+        if(textAreaText.scrollHeight > textAreaText.clientHeight)
+        {
+        	textAreaText.style.height = textAreaText.scrollHeight + 'px';
+        }
+
+        div.LineInfo = {
+        	Elements: {
+        		TextareaText: textAreaText,
+        		InputName: inputName,
+        		SelectEmotion: selectEmotion,
+        		InputHeSaid: inputHeSaid        		
+        	},
+        	Line: line
+        };
+
+        return div;
+	}
+
+
+    LoadJSON(file)
+    {   
     	this._fileName = file.name;
     
     	// remove all children elements
@@ -175,64 +318,7 @@ class Editor
 
             for(const line of this._data)
             {
-                var div = this.CreateElement(null, 'div', 'lineContainer');                
-
-                var divText = this.CreateElement(div, 'div', 'linePropertyContainer');
-
-                var textAreaText = this.CreateElement(divText, 'textarea', 'lineText');
-                textAreaText.cols = 80;
-                textAreaText.value = line.Text;
-                textAreaText.readOnly = true;
-                textAreaText.tabIndex = "-1";
-                textAreaText.style.height = 'auto';
-                textAreaText.Line = line;
-
-                var divProps = this.CreateElement(div, 'div', 'linePropertyContainer');
-               
-                var labelName = this.CreateElement(divProps, 'label', 'lineLabel');
-                labelName.textContent = 'Name:';
-                var inputName = this.CreateElement(divProps, 'input', 'lineName');
-                inputName.type = "text";
-                inputName.setAttribute('list', this._datalistName.id);
-                inputName.addEventListener('blur', AddNameCallback);
-                inputName.addEventListener('input', SetModifiedCallback);
-                inputName.value = line.Name !== '???' ? line.Name : '';
-                inputName.Line = line;
-
-
-				// empty elements just to give some space between the "name"
-				// and the other property. Competent web designers probably
-				// do not need this sort of hack
-				this.CreateElement(divProps, 'label', 'lineLabel');
-				this.CreateElement(divProps, 'label', 'lineLabel');
-				
-                var labelEmotion = this.CreateElement(divProps, 'label', 'lineLabel');
-                labelEmotion.textContent = 'Emotion:';
-                var selectEmotion = this.CreateElement(divProps, 'select', 'lineEmotion');
-                this.CreateElementOption(selectEmotion, 'none');
-                this.CreateElementOption(selectEmotion, 'angry');
-                this.CreateElementOption(selectEmotion, 'excited');
-                this.CreateElementOption(selectEmotion, 'sad');
-                selectEmotion.addEventListener('change', SetEmotionCallback);
-                selectEmotion.value = line.Emotion ? line.Emotion : 'none';
-                selectEmotion.Line = line;
-
-				// more empty elements for spacing
-				this.CreateElement(divProps, 'label', 'lineLabel');			                
-                
-               	var labelheSaid = this.CreateElement(divProps, 'label', 'lineLabelHeSaid');
-               	labelheSaid.textContent = 'He said';
-               	var inputHeSaid = this.CreateElement(labelheSaid, 'input', 'lineHeSaid');
-               	inputHeSaid.type = "checkbox";
-               	inputHeSaid.addEventListener('click', SetHeSaidCallback);
-               	inputHeSaid.checked = line.HeSaid ? line.HeSaid : false;
-               	inputHeSaid.Line = line;
-
-                this._divLines.appendChild(div);
-
-                // must be done after the textArea is visible, which will only
-                // happen after it is added to the body
-                textAreaText.style.height = textAreaText.scrollHeight + 'px';
+            	this.CreateLineDiv(line, null);                
             }
         });
     }
@@ -261,6 +347,149 @@ class Editor
       	document.body.removeChild(a);
 
       	this.SetModified(false);
+    }
+
+
+    AddUndoSplitInfo(usi)
+    {    	
+    	this._undoSplitStack.push(usi);
+    }
+
+
+    ShowNoTextSelectedError()
+    {
+    	alert('You must select the text you want to split');
+    }
+
+
+    FlashElement(e)
+    {
+    	const classStart = 'lineFlash';
+    	const classEnd = 'lineFlashEnd';
+    	const delay = 1050;
+    	
+    	e.classList.add(classStart);
+    	setTimeout(function()
+    	{
+    		e.classList.remove(classStart);
+    		e.classList.add(classEnd);
+    		setTimeout(function()
+    		{
+    			e.classList.remove(classEnd);
+    		},delay);
+    	}, delay);
+    }
+
+
+    SplitSelectedText()
+    {
+    	if(!this._textareaSelected)
+		{
+			this.ShowNoTextSelectedError();
+			return;
+		}
+
+		const selectedDiv = this._textareaSelected.parentElement.parentElement
+		
+		var line = selectedDiv.LineInfo.Line;
+	
+		var pEnd = this._textareaSelected.selectionStart - 1;
+		var textBefore = line.Text.substr(0, pEnd);
+
+		var p = pEnd + 1;
+		pEnd = this._textareaSelected.selectionEnd;
+		var textSelected = line.Text.substr(p, pEnd - p);
+
+		if(!textSelected)
+		{
+			this.ShowNoTextSelectedError();
+			return;
+		}
+
+		var textAfter = line.Text.substr(pEnd);
+
+		// alert('before: "' + textBefore + '"\n\n' + 'sel: "' + textSelected + '"\n\nafter: "' + textAfter + '"');
+		;
+
+		const usi = new UndoSplitInfo(selectedDiv, line);
+
+		if(!textBefore)
+		{
+			textBefore = textSelected;
+			textSelected = textAfter;
+			textAfter = null;
+		}
+   	    		
+   	    line.Text = textBefore;
+   	    this._textareaSelected.value = textBefore;
+
+   	    const lineSelected = {
+   	    	Text: textSelected,
+   	    	Name: '' 
+   	    };
+
+		const index = this._data.indexOf(line);
+   	    this._data.splice(index, 0, lineSelected);
+
+   	    var divSelected = this.CreateLineDiv(
+   	    	lineSelected, 
+   	    	this._textareaSelected.parentElement.parentElement);
+
+   	    usi.Divs.push(divSelected);
+
+		if(textAfter)
+		{
+	   	    const lineAfter = {
+	   	    	Text: textAfter,
+	   	    	Name: '' 
+	   		};
+	   	    
+	   	    this._data.splice(index + 1, 0, lineAfter);
+
+	   	    const divAfter = this.CreateLineDiv(lineAfter, divSelected);
+
+	   	    usi.Divs.push(divAfter);
+	   	}
+
+	   	this.AddUndoSplitInfo(usi);
+
+	   	for(var e of usi.Divs)
+	   	{
+	   		this.FlashElement(e);
+	   	}
+    }
+
+
+    UndoSplitSelectedText()
+    {
+    	if(this._undoSplitStack.length === 0)
+    	{
+    		alert('nothing to undo');
+    		return;
+    	}
+
+    	const usi = this._undoSplitStack.pop();
+    	
+    	while(usi.Divs.length > 1)
+    	{
+    		var div = usi.Divs.pop();
+    		div.remove();
+    	}
+
+    	var li = usi.Divs[0].LineInfo;
+    	li.Line.Text = usi.Line.Text;
+    	li.Elements.TextareaText.value = usi.Line.Text;
+    	li.Elements.InputName.value = usi.Line.Name;
+
+    	if(usi.Line.Emotion)
+    	{
+    		li.Elements.SelectEmotion = usi.Line.Emotion;
+    	}
+
+    	if(usi.Line.HeSaid)
+    	{
+    		li.Elements.InputHeSaid.checked = usi.Line.HeSaid;
+    	}
     }
 }
 

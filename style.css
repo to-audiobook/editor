@@ -6,6 +6,11 @@ body,input,textarea,select,datalist,a {
     color: #ccc    
 }
 
+body {
+	margin: 0;
+	padding: 0;
+}
+
 
 input,textarea,select {
  	border: 1px;
@@ -16,19 +21,35 @@ input,textarea,select {
 
 .menuContainer {
 	display: flex;
+	position: sticky;
+	top: 0px;	
+	padding-top: 10px;
+	padding-bottom: 10px;
+	padding-left: 10px;
+	width: 100%;
+	background-color: #000;
+	cursor: pointer;
 }
 
 
 .menuItem {
 	font-weight: 800;
 	text-decoration: none;
+	padding-right: 20px;
+	background-color: #000;
 }
 
 
-.menuItem:hover {
+.menuItemClickable {
+	/*padding-right: 0;*/
+	padding: 3px;
+}
+
+
+.menuItemClickable:hover {
 	background-color: #ccc;
 	color: #222;
-	transition: background-color 0.5s;
+	transition: all 0.25s;	
 }
 
 
@@ -81,4 +102,16 @@ input,textarea,select {
 
 .lineHeSaid {
     flex: 1;
+}
+
+
+.lineFlash {
+	background-color: #fff;
+	transition: all 1s;	
+}
+
+
+.lineFlashEnd {
+	background-color: #222;
+	transition: all 1s;	
 }
