@@ -303,6 +303,11 @@ class Editor
 
     LoadJSON(file)
     {   
+    	// clean up
+		this._data = null;		
+		this._textareaSelected = null;
+		this._undoSplitStack.length = 0;
+    
     	this._fileName = file.name;
     
     	// remove all children elements
@@ -429,7 +434,7 @@ class Editor
    	    };
 
 		const index = this._data.indexOf(line);
-   	    this._data.splice(index, 0, lineSelected);
+   	    this._data.splice(index + 1, 0, lineSelected);
 
    	    var divSelected = this.CreateLineDiv(
    	    	lineSelected, 
@@ -444,7 +449,7 @@ class Editor
 	   	    	Name: '' 
 	   		};
 	   	    
-	   	    this._data.splice(index + 1, 0, lineAfter);
+	   	    this._data.splice(index + 2, 0, lineAfter);
 
 	   	    const divAfter = this.CreateLineDiv(lineAfter, divSelected);
 
